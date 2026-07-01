@@ -361,7 +361,6 @@ const MANDATORY_PM = [];
 const LIBRARY_TASKS = [
   {id:'case-q',          icon:'💡', label:'Case Study Question', desc:'Solve 1 PM case study question today',              carry:true},
   {id:'cohere',          icon:'📖', label:'Cohere Docs',          desc:'Study a section of Cohere docs today',              carry:true, link:'https://docs.cohere.com/docs/build-things-with-cohere'},
-  {id:'college2',        icon:'🎓', label:'2nd College Article',  desc:'Complete 2nd college case article today',          carry:false},
   {id:'app-build',       icon:'🛠️', label:'Build a Simple App',   desc:'Build one small app or feature today',             carry:true},
   {id:'hellopm-session', icon:'🎥', label:'HelloPM Video',        desc:'',                                                 carry:false, link:'https://www.youtube.com/@hellopm/videos'},
   {id:'lp-session',      icon:'🤖', label:'Learn Prompting',      desc:'',                                                 carry:false, link:'https://learnprompting.thinkific.com/collections'},
@@ -497,6 +496,12 @@ function tickPer(field){
   showToast(log[field]?msgs[field]:'↩️ Unmarked');
   render();
 }
+function toggleC2on(){
+  const log=getLog(today());
+  log.c2on=!log.c2on;
+  if(!log.c2on) log.c2=false;
+  save();render();
+}
 
 function tickLP(i){
   if(S.lpDone.includes(i))S.lpDone=S.lpDone.filter(x=>x!==i);
@@ -586,8 +591,8 @@ function render(){
   const addedTasks=todayAdded.map(id=>lib.find(t=>t.id===id)).filter(Boolean);
   const addedDone=addedTasks.filter(t=>t.once?(S.ytDone||[]).includes(t.id):log.pm[t.id]).length;
   const cDone=carried.filter(t=>S.logs[t.carriedFrom]?.pm[t.id]).length;
-  const perDone=(log.c1?1:0)+(log.novel?1:0);
-  const total=addedTasks.length+carried.length+2;
+  const perDone=(log.c1?1:0)+(log.novel?1:0)+(log.c2on&&log.c2?1:0);
+  const total=addedTasks.length+carried.length+2+(log.c2on?1:0);
   const done=addedDone+cDone+perDone;
   const pct=total?Math.round(done/total*100):0;
 
@@ -705,22 +710,42 @@ function render(){
   document.getElementById('pmList').innerHTML=pmH;
 
   // ── Personal tasks ──
-  const pDefs=[
-    {field:'c1',   icon:'🎓',label:'College Case Article'},
-    {field:'novel',icon:'📚',label:'Novel Chapter (before sleep)'},
-  ];
   let pH='';
-  pDefs.forEach(t=>{
+  // Mandatory personal tasks
+  const pMand=[
+    {field:'c1',   icon:'🎓',label:'College Case Article',       sub:'🔴 Mandatory · Cannot shift to next day'},
+    {field:'novel',icon:'📚',label:'Novel Chapter (before sleep)', sub:'🔴 Mandatory · Cannot shift to next day'},
+  ];
+  pMand.forEach(t=>{
     const d=log[t.field];
     pH+=`<div class="tk per-t${d?' done':''}" onclick="tickPer('${t.field}')">
       <div class="chk">${d?'✓':''}</div>
       <div class="tb">
         <div class="tn">${t.icon} ${t.label}</div>
-        <div class="tm">🔴 Mandatory · Cannot shift to next day</div>
+        <div class="tm">${t.sub}</div>
       </div>
       <div class="tr"><span class="cbadge mand">Must do</span></div>
     </div>`;
   });
+  // 2nd college article — optional toggle
+  pH+=`<div class="tog-row" style="margin-top:10px">
+    <span class="tog-label">📘 Had 2 lectures today? Add 2nd article</span>
+    <label class="sw" onclick="toggleC2on()">
+      <input type="checkbox" ${log.c2on?'checked':''} readonly>
+      <span class="sl2"></span>
+    </label>
+  </div>`;
+  if(log.c2on){
+    const d2=log.c2;
+    pH+=`<div class="tk per-t${d2?' done':''}" onclick="tickPer('c2')">
+      <div class="chk">${d2?'✓':''}</div>
+      <div class="tb">
+        <div class="tn">🎓 2nd College Article</div>
+        <div class="tm">🟡 Optional for today</div>
+      </div>
+      <div class="tr"><span class="cbadge" style="background:rgba(250,204,21,.15);color:#fbbf24;border-color:rgba(250,204,21,.3)">Extra</span></div>
+    </div>`;
+  }
   document.getElementById('perList').innerHTML=pH;
 
   // ── Learn Prompting list ──
@@ -815,8 +840,8 @@ function renderHistory(){
     const monName=dt.toLocaleDateString('en-IN',{month:'short'});
     const pmD=log?Object.values(log.pm).filter(v=>v).length:0;
     const pmT=log?(MANDATORY_PM.length+(log.added||[]).length):MANDATORY_PM.length;
-    const perD=log?(log.c1?1:0)+(log.novel?1:0):0;
-    const perT=2;
+    const perD=log?(log.c1?1:0)+(log.novel?1:0)+(log.c2on&&log.c2?1:0):0;
+    const perT=log?(log.c2on?3:2):2;
     const hasData=!!log;
     const allDone=hasData&&pmD===pmT&&perD===perT;
     const anyDone=hasData&&(pmD>0||perD>0);

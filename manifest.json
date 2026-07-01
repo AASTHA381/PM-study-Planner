@@ -2,7 +2,7 @@
   "name": "PM Study Planner",
   "short_name": "PM Planner",
   "description": "Daily PM role study tracker — courses, tasks, streaks",
-  "start_url": "./index.html",
+  "start_url": "./pm-tracker.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0b0f2a",

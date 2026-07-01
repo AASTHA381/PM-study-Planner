@@ -1,7 +1,7 @@
-/* PM Study Planner — Service Worker v1 */
-const CACHE = 'pm-planner-v1';
+/* PM Study Planner — Service Worker v2 */
+const CACHE = 'pm-planner-v2';
 const ASSETS = [
-  './index.html',
+  './pm-tracker.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',

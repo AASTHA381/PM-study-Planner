@@ -257,7 +257,7 @@
 
     <div class="info-note">
       <span class="ico">ℹ️</span>
-      <span><strong>4 mandatory tasks every day.</strong> Pick extra tasks from the <strong>All Tasks</strong> list below — add only what you have time for. Missed carry-over tasks auto-appear the next day.</span>
+      <span>Pick tasks from the <strong>All Tasks</strong> list below — add what you want to do today. Missed carry-over tasks auto-appear the next day.</span>
     </div>
 
     <!-- Carried over -->
@@ -268,7 +268,7 @@
 
     <!-- Mandatory PM + added tasks -->
     <section>
-      <div class="stitle">🔴 Today's Tasks <span class="tag pm">Mandatory first · add from library as needed</span></div>
+      <div class="stitle">🔴 Today's Tasks <span class="tag pm">Add from the list above</span></div>
       <div id="pmList"></div>
     </section>
 
@@ -355,13 +355,12 @@ const LP_COURSES = [
 ];
 
 // Mandatory PM tasks — always shown, cannot be removed
-const MANDATORY_PM = [
-  {id:'case-q', icon:'💡', label:'Case Study Question', desc:'Solve 1 PM case study question today',               carry:true},
-  {id:'cohere', icon:'📖', label:'Cohere Docs',          desc:'Study a section of Cohere docs today',              carry:true, link:'https://docs.cohere.com/docs/build-things-with-cohere'},
-];
+const MANDATORY_PM = [];
 
-// Library tasks — optional, tap to add to today as needed
+// All tasks — pick what to do today from this list
 const LIBRARY_TASKS = [
+  {id:'case-q',          icon:'💡', label:'Case Study Question', desc:'Solve 1 PM case study question today',              carry:true},
+  {id:'cohere',          icon:'📖', label:'Cohere Docs',          desc:'Study a section of Cohere docs today',              carry:true, link:'https://docs.cohere.com/docs/build-things-with-cohere'},
   {id:'college2',        icon:'🎓', label:'2nd College Article',  desc:'Complete 2nd college case article today',          carry:false},
   {id:'app-build',       icon:'🛠️', label:'Build a Simple App',   desc:'Build one small app or feature today',             carry:true},
   {id:'hellopm-session', icon:'🎥', label:'HelloPM Video',        desc:'',                                                 carry:false, link:'https://www.youtube.com/@hellopm/videos'},
@@ -410,12 +409,10 @@ function fmtD(d){return new Date(d+'T12:00:00').toLocaleDateString('en-IN',{week
 
 function getLog(d){
   if(!S.logs[d]){
-    const pm={};MANDATORY_PM.forEach(t=>pm[t.id]=false);
-    S.logs[d]={pm, added:[], c1:false, c2:false, c2on:false, novel:false};
+    S.logs[d]={pm:{}, added:[], c1:false, c2:false, c2on:false, novel:false};
     save();
   } else {
     if(!S.logs[d].added) S.logs[d].added=[];
-    MANDATORY_PM.forEach(t=>{ if(!(t.id in S.logs[d].pm)) S.logs[d].pm[t.id]=false; });
     // Ensure added library tasks have a pm entry
     (S.logs[d].added||[]).forEach(id=>{ if(!(id in S.logs[d].pm)) S.logs[d].pm[id]=false; });
   }
@@ -435,9 +432,7 @@ function getCarried(){
   const dates=Object.keys(S.logs).filter(d=>d<td).sort();
   for(const d of dates){
     const log=S.logs[d];if(!log)continue;
-    MANDATORY_PM.filter(t=>t.carry).forEach(t=>{
-      if((t.id in log.pm)&&!log.pm[t.id]&&!map[t.id]) map[t.id]={...t,carriedFrom:d};
-    });
+    // No MANDATORY_PM any more — all tasks come through log.added
     (log.added||[]).forEach(id=>{
       const t=lib.find(lt=>lt.id===id);
       if(t&&t.carry&&log.pm[id]===false&&!map[id]) map[id]={...t,carriedFrom:d};
@@ -589,12 +584,11 @@ function render(){
   const lib=getAllLibrary();
   const todayAdded=(log.added||[]);
   const addedTasks=todayAdded.map(id=>lib.find(t=>t.id===id)).filter(Boolean);
-  const mandPMDone=MANDATORY_PM.filter(t=>log.pm[t.id]).length;
   const addedDone=addedTasks.filter(t=>t.once?(S.ytDone||[]).includes(t.id):log.pm[t.id]).length;
   const cDone=carried.filter(t=>S.logs[t.carriedFrom]?.pm[t.id]).length;
   const perDone=(log.c1?1:0)+(log.novel?1:0);
-  const total=MANDATORY_PM.length+addedTasks.length+carried.length+2;
-  const done=mandPMDone+addedDone+cDone+perDone;
+  const total=addedTasks.length+carried.length+2;
+  const done=addedDone+cDone+perDone;
   const pct=total?Math.round(done/total*100):0;
 
   document.getElementById('pct').textContent=pct+'%';
@@ -683,24 +677,13 @@ function render(){
   libH+=`</div>`;
   document.getElementById('libSection').innerHTML=libH;
 
-  // ── Mandatory PM tasks ──
+  // ── Tasks added from library ──
   let pmH='';
-  MANDATORY_PM.forEach(t=>{
-    const done=log.pm[t.id]||false;
-    const linkStr=t.link?` &nbsp;·&nbsp; <a href="${t.link}" target="_blank" onclick="event.stopPropagation()">🔗 Open</a>`:'';
-    pmH+=`<div class="tk pm-t${done?' done':''}" onclick="tickPM('${t.id}',null)">
-      <div class="chk">${done?'✓':''}</div>
-      <div class="tb">
-        <div class="tn">${t.icon} ${t.label}</div>
-        <div class="tm">${t.desc||''}${linkStr}</div>
-      </div>
-      <div class="tr"><span class="cbadge mand">Must do</span></div>
-    </div>`;
-  });
-
-  // ── Added tasks from library ──
+  if(!addedTasks.length && !carried.length){
+    pmH='<div style="padding:18px 12px;text-align:center;color:var(--muted);font-size:.82rem">No tasks added yet — pick from the <strong style="color:var(--pm)">All Tasks</strong> list above 👆</div>';
+  }
   if(addedTasks.length){
-    pmH+=`<div class="added-label">📋 Added for today — tap to check, ✕ to remove</div>`;
+    pmH+=`<div class="added-label">📋 Today's selected tasks — tap to check, ✕ to remove</div>`;
     addedTasks.forEach(t=>{
       let desc=t.desc||'';
       if(t.id==='hellopm-session'){const nh=nextHelloPM();desc=nh<60?`Next: Video ${nh+1}/60 — <a href="https://www.youtube.com/@hellopm/videos" target="_blank">Open Channel ↗</a>`:'🎉 All 60 done!';}

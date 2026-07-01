@@ -562,6 +562,18 @@ function addFromLibrary(id){
 }
 function removeFromToday(id){
   const log=getLog(today());
+  // If task was completed, undo the progress counter
+  if(log.pm[id]){
+    if(id==='hellopm-session'&&log._hpIdx!=null){
+      S.helloPMDone=S.helloPMDone.filter(i=>i!==log._hpIdx);delete log._hpIdx;
+    }
+    if(id==='lp-session'&&log._lpIdx!=null){
+      S.lpDone=S.lpDone.filter(i=>i!==log._lpIdx);delete log._lpIdx;
+    }
+    if(id==='noob-session'&&log._noobIdx!=null){
+      S.noobDone=S.noobDone.filter(i=>i!==log._noobIdx);delete log._noobIdx;
+    }
+  }
   log.added=(log.added||[]).filter(x=>x!==id);
   delete log.pm[id];
   save();showToast('↩️ Removed from today');render();
